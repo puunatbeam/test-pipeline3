@@ -1,0 +1,42 @@
+name: Sync Release to Main
+
+on:
+  pull_request:
+    branches:
+      - "release-*"
+    types:
+      - opened
+      - synchronize
+      - edited
+
+jobs:
+  syncMain:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Fetch and reset branch
+        run: |
+          git fetch origin
+          git reset --hard origin/${{ github.event.pull_request.base.ref }}
+
+      - name: Get PR Title and Body
+        id: pr_info
+        run: |
+          echo "title=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
+          echo "body=${{ github.event.pull_request.body }}" >> $GITHUB_ENV
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: ${{ github.head_ref }}-main
+          title: "${{ env.title }}"
+          body: "${{ env.body }}"
+          base: main
+          labels: automated, sync
